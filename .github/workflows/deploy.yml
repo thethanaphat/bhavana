@@ -1,0 +1,51 @@
+# Build แล้ว deploy ขึ้น GitHub Pages อัตโนมัติทุกครั้งที่ push เข้า main
+# ตั้งใจให้ไม่มีขั้นตอนที่ต้องทำด้วยมือ คนที่มาดูแลต่อจึง deploy ได้โดยไม่ต้องถามใคร
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# ปล่อยทีละชุด ถ้า push รัว ๆ ให้ชุดใหม่แทนที่ชุดที่ยังไม่เสร็จ
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      # ตรวจก่อนปล่อย ถ้า type ผิดหรือ test ตก จะไม่มีอะไรขึ้นเว็บ
+      - run: npm test
+      - run: npm run build
+      - name: ตรวจเพดานขนาดไฟล์ของ static host
+        run: |
+          large=$(find dist -type f -size +25M)
+          if [ -n "$large" ]; then echo "ไฟล์เกิน 25 MiB:"; echo "$large"; exit 1; fi
+          echo "จำนวนไฟล์: $(find dist -type f | wc -l)"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
