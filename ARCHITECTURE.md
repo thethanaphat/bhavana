@@ -55,7 +55,7 @@ History แยกนั่ง/เดิน/สวด แสดงวันที
 ## Technical architecture
 
 - **Frontend:** TypeScript แบบ strict + Vite, โครง UI แยก feature, static hosting ผ่าน HTTPS, ไม่มี server runtime
-- **Hosting:** GitHub เป็นแหล่งจริงของโค้ด, Cloudflare Pages เป็นโฮสต์ production, **ไม่ใช้ Railway** เพราะไม่มี server runtime ให้รันและจะกลายเป็นค่าใช้จ่ายรายเดือนเปล่า ๆ — ดู [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- **Hosting:** GitHub เป็นทั้งแหล่งจริงของโค้ดและโฮสต์ production ผ่าน GitHub Pages + Actions **ไม่ใช้ Railway** เพราะไม่มี server runtime ให้รัน และ **ไม่ผูกกับโดเมนธุรกิจ** เพราะโปรเจกต์ต้องอยู่ได้แม้เจ้าของหยุดต่ออายุโดเมน Cloudflare Pages/R2 เป็นทางหนีเมื่อชน bandwidth — ดู [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - **เสียงบทสวด:** สร้าง URL ผ่าน `prayerAudioUrl()` ใน `src/content/audio.ts` ที่เดียว รองรับทั้ง path ในโปรเจกต์และ URL เต็ม เพื่อให้ย้ายไฟล์ไป object storage ภายหลังโดยไม่ต้องแก้ UI
 - **PWA:** manifest, standalone, ไอคอน, iPhone safe area, service worker สำหรับ app shell, ข้อความบทสวด และไฟล์ระฆังสั้น; cache แบบ versioned
 - **ข้อมูล:** IndexedDB เป็นแหล่งจริง; stores สำหรับ `PracticeSession`, `ChantSession`, `ActiveSession`, `Settings`, `LegacyBaseline`, `CustomPrayer`; เตรียม version migration และ export/import JSON ที่ตรวจ schema ก่อนเขียน

@@ -42,7 +42,9 @@ npm run preview -- --host
 
 ## การ deploy
 
-**GitHub = source of truth · Cloudflare Pages = โฮสต์หลักของ production · GitHub Pages = มิเรอร์สำรองในอนาคต · ไม่ใช้ Railway · R2 ไว้ค่อยพิจารณา**
+**GitHub = ทั้งแหล่งจริงของโค้ดและโฮสต์ production ผ่าน GitHub Pages · ไม่ใช้โดเมนธุรกิจ เพราะโปรเจกต์ต้องอยู่ได้แม้เจ้าของหยุดทำธุรกิจ · ไม่ใช้ Railway · Cloudflare Pages กับ R2 เป็นทางหนีเมื่อคนใช้เยอะ**
+
+push เข้า `main` แล้ว GitHub Actions จะ `npm ci` → `npm test` → `npm run build` → ตรวจขนาดไฟล์ → ปล่อยขึ้น Pages ให้เอง ถ้า test ตกจะไม่มีอะไรขึ้นเว็บ
 
 | | |
 |---|---|
@@ -51,8 +53,9 @@ npm run preview -- --host
 | Node version | อ่านจาก `.node-version` (22.12.0) |
 | Environment variables | ไม่มี |
 | Redirect / rewrite | ไม่ต้องตั้ง เพราะใช้ hash routing |
+| Base path | `./` ใช้ได้ทั้งที่รากและใต้ subpath |
 
-รายละเอียดทั้งหมด เหตุผลที่ไม่ใช้ Railway นโยบายไฟล์เสียง ข้อจำกัด 25 MiB แผนย้ายไป R2 และวิธีย้ายไปโฮสต์อื่น อยู่ใน [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+รายละเอียด เหตุผล นโยบายไฟล์เสียง เพดานที่ต้องไม่ชน และวิธีย้ายไปโฮสต์อื่น อยู่ใน [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## ข้อมูลของคุณ
 
