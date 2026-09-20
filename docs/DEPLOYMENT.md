@@ -1,4 +1,4 @@
-# การ deploy Mindful Practice
+# การ deploy ภาวนา
 
 เอกสารนี้เขียนให้คนที่ต้องมา deploy หรือดูแลโปรเจกต์นี้ต่อ โดยไม่ต้องถามเจ้าของเดิม
 
@@ -13,7 +13,7 @@ GitHub repository (source of truth)
 GitHub Actions  ──npm ci → npm test → npm run build──▶  dist/
       │
       ▼
-GitHub Pages  ──▶  https://<username>.github.io/mindful-practice/
+GitHub Pages  ──▶  https://thethanaphat.github.io/bhavana/
       │
       ▼
 iPhone / มือถือของผู้ใช้
@@ -34,7 +34,7 @@ GitHub เป็นทั้ง **แหล่งจริงของโค้�
 
 เหตุผลหลักไม่ใช่เรื่องราคา แต่เป็น **ความอยู่รอดระยะยาว**
 
-`<username>.github.io` ไม่ต้องต่ออายุ ไม่ต้องจ่ายค่าโดเมน และไม่ผูกกับการที่ธุรกิจของเจ้าของเดิมยังดำเนินอยู่ ต่างจากโดเมนธุรกิจซึ่งจะหยุดทำงานทันทีในวันที่ไม่ได้ต่ออายุ — ซึ่งขัดกับเป้าหมายข้อที่ว่าโปรเจกต์ต้องอยู่รอดแม้ผู้พัฒนาเดิมหยุดดูแล
+`thethanaphat.github.io` ไม่ต้องต่ออายุ ไม่ต้องจ่ายค่าโดเมน และไม่ผูกกับการที่ธุรกิจของเจ้าของเดิมยังดำเนินอยู่ ต่างจากโดเมนธุรกิจซึ่งจะหยุดทำงานทันทีในวันที่ไม่ได้ต่ออายุ — ซึ่งขัดกับเป้าหมายข้อที่ว่าโปรเจกต์ต้องอยู่รอดแม้ผู้พัฒนาเดิมหยุดดูแล
 
 เหตุผลรอง: เจ้าของโปรเจกต์ใช้ GitHub เป็นประจำอยู่แล้ว การ deploy จึงเป็นแค่ `git push` เหมือนงานอื่น ไม่มีเครื่องมือใหม่ให้ต้องจำ
 
@@ -90,7 +90,7 @@ dist
 
 `vite.config.ts` ตั้ง `base: './'` ทำให้ build ชุดเดียวใช้ได้ทั้ง:
 
-- ใต้ subpath เช่น `username.github.io/mindful-practice/` (GitHub Pages project site)
+- ใต้ subpath เช่น `thethanaphat.github.io/bhavana/` (GitHub Pages project site)
 - ที่รากโดเมน เช่น `xxx.pages.dev` หรือ `username.github.io` (user site)
 
 `manifest.webmanifest` ก็ใช้เส้นทางสัมพัทธ์ทั้ง `start_url`, `scope` และไอคอน **อย่าเปลี่ยนกลับเป็น path แบบ absolute** เพราะจะล็อกแอปไว้กับตำแหน่งเดียว
@@ -154,20 +154,20 @@ Service worker (`public/sw.js`) ลงทะเบียนเฉพาะ produ
 
 **ห้ามถือว่า cache ของเบราว์เซอร์เป็นที่เก็บถาวร** ระบบล้างได้ทุกเมื่อ ข้อมูลผู้ใช้จริงต้องอยู่ใน IndexedDB เท่านั้น
 
-เวลาเปลี่ยนสิ่งที่ cache ต้องขยับเลข `CACHE_NAME` ใน `sw.js` (ตอนนี้ `mindful-practice-shell-v5`) ไม่งั้นเครื่องที่เคยติดตั้งจะใช้ของเก่าต่อ ตัว SW เรียก `skipWaiting()` และ `clients.claim()` แล้ว จึงอัปเดตให้เองเมื่อเปิดแอปครั้งถัดไป
+เวลาเปลี่ยนสิ่งที่ cache ต้องขยับเลข `CACHE_NAME` ใน `sw.js` (ตอนนี้ `bhavana-shell-v1`) ไม่งั้นเครื่องที่เคยติดตั้งจะใช้ของเก่าต่อ ตัว SW เรียก `skipWaiting()` และ `clients.claim()` แล้ว จึงอัปเดตให้เองเมื่อเปิดแอปครั้งถัดไป
 
 ## 12. ข้อมูลผู้ใช้อยู่ในเครื่อง
 
-IndexedDB ชื่อ `mindful-practice` เป็นแหล่งจริงของ `PracticeSession`, `ChantSession`, `ActiveSession`, `Settings`, `LegacyBaseline`, `CustomPrayer` — ไม่มีบัญชีผู้ใช้ ไม่มีการซิงก์
+IndexedDB ชื่อ `bhavana` เป็นแหล่งจริงของ `PracticeSession`, `ChantSession`, `ActiveSession`, `Settings`, `LegacyBaseline`, `CustomPrayer` — ไม่มีบัญชีผู้ใช้ ไม่มีการซิงก์
 
-**เบราว์เซอร์ผูกข้อมูลไว้กับ origin** `http://192.168.1.58:4173` กับ `https://username.github.io/mindful-practice/` คือคนละที่เก็บข้อมูลโดยสิ้นเชิง **การย้ายโฮสต์หรือเปลี่ยน URL เท่ากับผู้ใช้เริ่มจากศูนย์** ต้องส่งออกก่อนย้ายเสมอ และถ้าวันหนึ่งย้ายโฮสต์ตอนมีผู้ใช้แล้ว ต้องประกาศล่วงหน้า
+**เบราว์เซอร์ผูกข้อมูลไว้กับ origin** `http://192.168.1.58:4173` กับ `https://thethanaphat.github.io/bhavana/` คือคนละที่เก็บข้อมูลโดยสิ้นเชิง **การย้ายโฮสต์หรือเปลี่ยน URL เท่ากับผู้ใช้เริ่มจากศูนย์** ต้องส่งออกก่อนย้ายเสมอ และถ้าวันหนึ่งย้ายโฮสต์ตอนมีผู้ใช้แล้ว ต้องประกาศล่วงหน้า
 
 ## 13. การสำรองข้อมูลด้วย export/import
 
 ในเมนูตั้งค่ามี **ส่งออกเป็นไฟล์ JSON · นำเข้าจากไฟล์สำรอง · ล้างประวัติทั้งหมด**
 
-- รูปแบบ: `{ format: 'mindful-practice-backup', version: 1, exportedAt, settings, practiceSessions, chantSessions, customPrayers, legacyBaseline }`
-- ชื่อไฟล์: `mindful-practice-YYYY-MM-DD.json`
+- รูปแบบ: `{ format: 'bhavana-backup', version: 1, exportedAt, settings, practiceSessions, chantSessions, customPrayers, legacyBaseline }`
+- ชื่อไฟล์: `bhavana-YYYY-MM-DD.json`
 - ตัวตรวจไฟล์อยู่ใน `src/data/backup.ts` เป็นฟังก์ชันบริสุทธิ์ ทดสอบได้โดยไม่ต้องมีเบราว์เซอร์
 - มีแถวเสียแถวเดียวจะปฏิเสธทั้งไฟล์ ไม่นำเข้าบางส่วนเงียบ ๆ
 - นำเข้าคือการแทนที่ทั้งหมด ถามยืนยันพร้อมแสดงจำนวนของเดิมเทียบกับในไฟล์
@@ -192,7 +192,7 @@ IndexedDB ชื่อ `mindful-practice` เป็นแหล่งจริ�
 
 ```bash
 git clone <repo>
-cd mindful-practice
+cd bhavana
 npm ci
 npm test
 npm run build                  # ผลลัพธ์อยู่ใน dist/

@@ -1,6 +1,6 @@
 import { defaultSettings, type Settings } from './models';
 
-const DATABASE_NAME = 'mindful-practice';
+const DATABASE_NAME = 'bhavana';
 const DATABASE_VERSION = 1;
 
 let databasePromise: Promise<IDBDatabase> | undefined;

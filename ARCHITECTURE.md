@@ -1,4 +1,4 @@
-# Mindful Practice — architecture และแผน V0.1
+# ภาวนา (bhavana) — architecture และแผน V0.1
 
 ปรับแผน: 20 กันยายน 2026 · สถานะ: Milestone 5 ผ่านแล้วบน iPhone จริง รวมถึงเกณฑ์เสียงตอนล็อกจอ; กำลังทำ Milestone 6
 
@@ -20,7 +20,7 @@ Navigation หลักมีเพียง **ฝึก · บทสวด · �
 | `web/app.py` | Flask เสิร์ฟ HTML ที่ build แล้วและใช้ `conditional=True` กับเสียงเพื่อรองรับ Range/seek บน Safari iPhone |
 | `ic-ebook/assets/shell.html`, `styles.css` | หน้าภาษาไทย, dark mode, responsive layout และการจำสถานะในเครื่อง |
 
-Mindful Practice เป็น sibling project แยกขาดจาก IC Summary ไม่ย้าย Flask, SQLite ฝั่งเซิร์ฟเวอร์, Stripe, login, watermark, tracking หรือเนื้อหา/เสียง IC มาใช้ ภาพแอปเดิมทั้ง 4 รูปในโฟลเดอร์นี้เป็นตัวอย่างทาง UX: ตัวเลือกเวลาขนาดใหญ่และสถิติสะสม แต่ไม่คัดลอกตัวตนหรือข้อความของแอปนั้น
+ภาวนา เป็น sibling project แยกขาดจาก IC Summary ไม่ย้าย Flask, SQLite ฝั่งเซิร์ฟเวอร์, Stripe, login, watermark, tracking หรือเนื้อหา/เสียง IC มาใช้ ภาพแอปเดิมทั้ง 4 รูปในโฟลเดอร์นี้เป็นตัวอย่างทาง UX: ตัวเลือกเวลาขนาดใหญ่และสถิติสะสม แต่ไม่คัดลอกตัวตนหรือข้อความของแอปนั้น
 
 ## ขอบเขต V0.1
 
@@ -84,7 +84,7 @@ CustomPrayer: id, title, text, createdAt, updatedAt
 ## Folder structure ที่เสนอ
 
 ```text
-Mindful Practice/
+ภาวนา/
 ├── ARCHITECTURE.md
 ├── README.md
 ├── index.html
@@ -227,7 +227,7 @@ Mindful Practice/
 
 `src/data/backup.ts` เก็บ schema และ **ตัวตรวจไฟล์แบบ pure** แยกจาก IndexedDB เพื่อให้ทดสอบได้โดยไม่ต้องมีเบราว์เซอร์ ส่วน `src/data/backupRepository.ts` ทำงานกับฐานข้อมูล
 
-รูปแบบไฟล์: `{ format: 'mindful-practice-backup', version: 1, exportedAt, settings, practiceSessions, chantSessions, customPrayers, legacyBaseline }` ชื่อไฟล์เป็น `mindful-practice-YYYY-MM-DD.json`
+รูปแบบไฟล์: `{ format: 'bhavana-backup', version: 1, exportedAt, settings, practiceSessions, chantSessions, customPrayers, legacyBaseline }` ชื่อไฟล์เป็น `bhavana-YYYY-MM-DD.json`
 
 การตัดสินใจที่สำคัญสามข้อ:
 

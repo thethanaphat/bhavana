@@ -16,7 +16,7 @@ export interface BellLogEntry {
   state?: string;
 }
 
-const STORAGE_KEY = 'mindful-practice.bell-log';
+const STORAGE_KEY = 'bhavana.bell-log';
 const MAX_ENTRIES = 60;
 export const PENDING = 'unknown';
 

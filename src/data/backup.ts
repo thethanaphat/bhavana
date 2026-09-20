@@ -1,6 +1,6 @@
 import { defaultSettings, type BackgroundSoundId, type BellInterval, type ChantSession, type CustomPrayer, type LegacyBaseline, type PracticeSession, type PracticeType, type Settings } from './models.js';
 
-export const BACKUP_FORMAT = 'mindful-practice-backup';
+export const BACKUP_FORMAT = 'bhavana-backup';
 export const BACKUP_VERSION = 1;
 
 export interface BackupFile {
@@ -123,8 +123,8 @@ export function buildBackup(parts: Omit<BackupFile, 'format' | 'version' | 'expo
 
 export function readBackup(raw: unknown): BackupCheck {
   const errors: string[] = [];
-  if (!isRecord(raw)) return { ok: false, errors: ['ไฟล์นี้ไม่ใช่ข้อมูลสำรองของ Mindful Practice'] };
-  if (raw.format !== BACKUP_FORMAT) return { ok: false, errors: ['ไฟล์นี้ไม่ใช่ข้อมูลสำรองของ Mindful Practice'] };
+  if (!isRecord(raw)) return { ok: false, errors: ['ไฟล์นี้ไม่ใช่ข้อมูลสำรองของภาวนา'] };
+  if (raw.format !== BACKUP_FORMAT) return { ok: false, errors: ['ไฟล์นี้ไม่ใช่ข้อมูลสำรองของภาวนา'] };
   if (raw.version !== BACKUP_VERSION) {
     return { ok: false, errors: [`ไฟล์สำรองเป็นเวอร์ชัน ${String(raw.version)} แต่แอปรองรับเวอร์ชัน ${BACKUP_VERSION}`] };
   }
@@ -163,5 +163,5 @@ export function readBackup(raw: unknown): BackupCheck {
 }
 
 export function backupFileName(nowIso: string): string {
-  return `mindful-practice-${nowIso.slice(0, 10)}.json`;
+  return `bhavana-${nowIso.slice(0, 10)}.json`;
 }

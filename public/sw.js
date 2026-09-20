@@ -1,6 +1,5 @@
 /* App shell, bundled prayer text, and short bells are cached. Long audio is on demand. */
-const CACHE_PREFIX = 'mindful-practice-';
-const CACHE_NAME = 'mindful-practice-shell-v5';
+const CACHE_NAME = 'bhavana-shell-v1';
 const SCOPE = self.registration.scope;
 const INDEX_URL = new URL('index.html', SCOPE).href;
 const BELL_URLS = ['audio/bells/start.m4a', 'audio/bells/interval.m4a', 'audio/bells/end.m4a']
@@ -27,8 +26,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-      .map((key) => caches.delete(key)));
+    // แอปนี้เป็นเจ้าของ origin ทั้งหมด จึงลบแคชชุดอื่นได้ทุกชุด
+    // รวมถึงชุดที่ตั้งชื่อด้วยชื่อโปรเจกต์เดิมก่อนเปลี่ยนมาเป็น bhavana
+    await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });

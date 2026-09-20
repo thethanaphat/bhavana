@@ -146,12 +146,12 @@ export class App {
     }
 
     const title = route.tab === 'prayers' ? 'บทสวด' : route.tab === 'records' ? 'บันทึก' : 'ฝึก';
-    document.title = `${title} · Mindful Practice`;
+    document.title = `${title} · ภาวนา`;
     this.root.querySelector<HTMLAudioElement>('#prayer-audio')?.pause();
     this.root.innerHTML = `
       <div class="app-shell">
         <header class="app-header">
-          <a class="brand" href="#/practice" aria-label="Mindful Practice หน้าฝึก"><span class="brand-mark">${icon('lotus')}</span><span><strong>Mindful</strong><small>Practice</small></span></a>
+          <a class="brand" href="#/practice" aria-label="ภาวนา หน้าฝึก"><span class="brand-mark">${icon('lotus')}</span><span><strong>ภาวนา</strong><small>BHAVANA</small></span></a>
           <button class="header-action" type="button" data-action="settings" aria-label="ข้อมูลและตั้งค่า">${icon('settings')}</button>
         </header>
         ${this.storageIssue ? `<div class="storage-warning" role="alert">เครื่องนี้ไม่สามารถบันทึกข้อมูลในเครื่องได้ โปรดลองเปิดแอปใหม่อีกครั้ง</div>` : ''}
@@ -163,7 +163,7 @@ export class App {
         </nav>
       </div>
       <dialog class="info-dialog" aria-labelledby="info-title">
-        <div class="dialog-head"><span class="eyebrow">Mindful Practice</span><button type="button" data-action="close-settings" aria-label="ปิด">${icon('close')}</button></div>
+        <div class="dialog-head"><span class="eyebrow">ภาวนา</span><button type="button" data-action="close-settings" aria-label="ปิด">${icon('close')}</button></div>
         <h2 id="info-title">พื้นที่ส่วนตัวของคุณ</h2>
         <p>ไม่ต้องลงทะเบียนหรือกรอกข้อมูลส่วนตัว การตั้งค่าและบันทึกการฝึกจะอยู่บนอุปกรณ์เครื่องนี้</p>
         <div class="dialog-note">เพิ่มแอปไปที่หน้าจอโฮมของ iPhone ได้จากเมนูแชร์ใน Safari</div>

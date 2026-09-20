@@ -69,12 +69,12 @@ test('broken settings fall back to defaults without losing the history', () => {
 });
 
 test('missing lists are treated as empty, not as an error', () => {
-  const sparse = { format: 'mindful-practice-backup', version: 1, exportedAt: '2026-09-20T15:00:00.000Z' };
+  const sparse = { format: 'bhavana-backup', version: 1, exportedAt: '2026-09-20T15:00:00.000Z' };
   const result = readBackup(sparse);
   assert.equal(result.ok, true);
   assert.deepEqual(result.counts, { practiceSessions: 0, chantSessions: 0, customPrayers: 0, hasLegacyBaseline: false });
 });
 
 test('the file name carries the export date', () => {
-  assert.equal(backupFileName('2026-09-20T15:00:00.000Z'), 'mindful-practice-2026-09-20.json');
+  assert.equal(backupFileName('2026-09-20T15:00:00.000Z'), 'bhavana-2026-09-20.json');
 });
