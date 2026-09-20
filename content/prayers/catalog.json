@@ -1,0 +1,20 @@
+[
+  {
+    "id": "itipiso",
+    "title": "อิติปิโส",
+    "order": 1,
+    "audioFile": "itipiso.m4a"
+  },
+  {
+    "id": "bahung",
+    "title": "พาหุง",
+    "order": 2,
+    "audioFile": "bahung.m4a"
+  },
+  {
+    "id": "millionaire-chant",
+    "title": "พระคาถาเงินล้าน",
+    "order": 3,
+    "audioFile": "millionaire-chant.m4a"
+  }
+]
