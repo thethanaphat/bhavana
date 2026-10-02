@@ -62,7 +62,6 @@ export async function listChantSessions(): Promise<ChantSession[]> {
 export async function addChantSession(prayerId: string, prayerTitleSnapshot: string, rounds: number | null, durationMin: number | null): Promise<ChantSession> {
   if (rounds !== null && (!Number.isInteger(rounds) || rounds < 1 || rounds > 9999)) throw new Error('Invalid rounds');
   if (durationMin !== null && (!Number.isInteger(durationMin) || durationMin < 1 || durationMin > 720)) throw new Error('Invalid duration');
-  const db = await openDatabase();
   const endedMs = Date.now();
   const durationSec = durationMin === null ? null : durationMin * 60;
   const item: ChantSession = {
@@ -70,11 +69,28 @@ export async function addChantSession(prayerId: string, prayerTitleSnapshot: str
     rounds, startedAt: new Date(endedMs - (durationSec ?? 0) * 1000).toISOString(),
     endedAt: new Date(endedMs).toISOString(), durationSec,
   };
+  await saveChantSession(item);
+  return item;
+}
+
+export async function saveChantSession(item: ChantSession): Promise<void> {
+  const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('chantSessions', 'readwrite');
     tx.objectStore('chantSessions').put(item);
-    tx.oncomplete = () => resolve(item);
+    tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error('Unable to save chanting'));
     tx.onabort = () => reject(tx.error ?? new Error('Unable to save chanting'));
+  });
+}
+
+export async function deleteChantSession(id: string): Promise<void> {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('chantSessions', 'readwrite');
+    tx.objectStore('chantSessions').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error('Unable to delete chanting'));
+    tx.onabort = () => reject(tx.error ?? new Error('Unable to delete chanting'));
   });
 }

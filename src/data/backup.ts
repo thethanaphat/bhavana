@@ -55,6 +55,7 @@ function checkPracticeSession(value: unknown, where: string, errors: string[]): 
   if (value.status !== 'completed' && value.status !== 'stopped') problems.push('status');
   if (!bellIntervals.includes(value.bellIntervalMin as BellInterval)) problems.push('bellIntervalMin');
   if (value.backgroundSoundId !== null && !soundIds.includes(value.backgroundSoundId as BackgroundSoundId)) problems.push('backgroundSoundId');
+  if (value.source !== undefined && value.source !== 'manual') problems.push('source');
   if (problems.length) errors.push(`${where}: ฟิลด์ไม่ถูกต้อง (${problems.join(', ')})`);
   return problems.length === 0;
 }
@@ -69,6 +70,7 @@ function checkChantSession(value: unknown, where: string, errors: string[]): val
   if (!isIsoDate(value.startedAt)) problems.push('startedAt');
   if (!isIsoDate(value.endedAt)) problems.push('endedAt');
   if (value.durationSec !== null && !isCount(value.durationSec)) problems.push('durationSec');
+  if (value.source !== undefined && value.source !== 'manual') problems.push('source');
   if (problems.length) errors.push(`${where}: ฟิลด์ไม่ถูกต้อง (${problems.join(', ')})`);
   return problems.length === 0;
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check": "tsc --noEmit",
-    "test": "tsc --ignoreConfig src/features/practice/timer.ts src/features/practice/bells.ts src/features/records/stats.ts src/data/id.ts src/data/backup.ts --target ES2022 --module ESNext --moduleResolution bundler --rootDir src --outDir .test-build --skipLibCheck && node --test tests/*.test.mjs",
+    "test": "tsc --ignoreConfig src/features/practice/timer.ts src/features/practice/bells.ts src/features/records/stats.ts src/features/records/backfill.ts src/data/id.ts src/data/backup.ts --target ES2022 --module ESNext --moduleResolution bundler --rootDir src --outDir .test-build --skipLibCheck && node --test tests/*.test.mjs",
     "build": "npm run check && vite build",
     "preview": "vite preview"
   },

@@ -1,9 +1,11 @@
 export type PracticeType = 'sitting' | 'walking';
 export type SessionStatus = 'completed' | 'stopped';
-// 1 นาทีมีไว้ย่นรอบทดสอบเสียงตอนล็อกจอ iPhone ให้เหลือไม่กี่นาที
-// ถ้ายืนยันผลแล้วและไม่ต้องการให้ผู้ใช้เห็น ให้ลบ `1 |` ออกจากบรรทัดล่าง แล้วลบ 1 ออกจาก bellIntervals ใน view และ guard ใน App
+// 1 นาทีเริ่มจากใช้ทดสอบเสียงตอนล็อกจอ แล้วเก็บไว้ถาวร เพราะเหมาะกับผู้เริ่มฝึกที่อยากมีระฆังช่วยดึงสติถี่ ๆ
 export type BellInterval = 0 | 1 | 5 | 10 | 15;
 export type BackgroundSoundId = 'rain' | 'soft-tones';
+// 'manual' = กรอกย้อนหลังเอง ไม่ได้จับเวลาจริง ใช้แยกป้ายในประวัติเท่านั้น สถิตินับเหมือนกัน
+// เป็นฟิลด์ไม่บังคับ บันทึกเก่าและไฟล์สำรองเดิมจึงใช้ได้โดยไม่ต้อง migrate
+export type RecordSource = 'manual';
 
 export interface RunInterval {
   startedAt: string;
@@ -21,6 +23,7 @@ export interface PracticeSession {
   bellIntervalMin: BellInterval;
   backgroundSoundId: BackgroundSoundId | null;
   runIntervals?: RunInterval[];
+  source?: RecordSource;
 }
 
 export interface ChantSession {
@@ -31,6 +34,7 @@ export interface ChantSession {
   startedAt: string;
   endedAt: string;
   durationSec: number | null;
+  source?: RecordSource;
 }
 
 export interface CustomPrayer {

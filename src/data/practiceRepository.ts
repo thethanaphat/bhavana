@@ -166,3 +166,25 @@ export async function listPracticeSessions(): Promise<PracticeSession[]> {
     request.onerror = () => reject(request.error ?? new Error('Unable to read practice sessions'));
   });
 }
+
+export async function savePracticeSession(session: PracticeSession): Promise<void> {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('practiceSessions', 'readwrite');
+    tx.objectStore('practiceSessions').put(session);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(fail(tx, 'Unable to save practice'));
+    tx.onabort = () => reject(fail(tx, 'Unable to save practice'));
+  });
+}
+
+export async function deletePracticeSession(id: string): Promise<void> {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('practiceSessions', 'readwrite');
+    tx.objectStore('practiceSessions').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(fail(tx, 'Unable to delete practice'));
+    tx.onabort = () => reject(fail(tx, 'Unable to delete practice'));
+  });
+}

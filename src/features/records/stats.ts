@@ -1,6 +1,6 @@
 import type { ChantSession, LegacyBaseline, PracticeSession, PracticeType } from '../../data/models';
 
-export type StatsPeriod = 'today' | 'week' | 'month' | 'all';
+export type StatsPeriod = 'day' | 'week' | 'month' | 'all';
 
 export interface TimeWindow {
   startMs: number;
@@ -26,27 +26,55 @@ export interface RecordStats {
   legacySittingSec: number;
 }
 
-export function periodWindow(period: StatsPeriod, nowMs: number): TimeWindow {
-  if (period === 'all') return { startMs: -Infinity, endMs: nowMs + 1 };
-  const now = new Date(nowMs);
-  let start: Date;
-  if (period === 'today') {
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  } else if (period === 'week') {
-    const mondayOffset = (now.getDay() + 6) % 7;
-    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
-  } else {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+export interface StatsBucket {
+  startMs: number;
+  endMs: number;
+  sittingSec: number;
+  walkingSec: number;
+  chantCount: number;
+}
+
+function periodStart(period: Exclude<StatsPeriod, 'all'>, anchorMs: number): Date {
+  const anchor = new Date(anchorMs);
+  if (period === 'day') return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  if (period === 'week') {
+    const mondayOffset = (anchor.getDay() + 6) % 7;
+    return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - mondayOffset);
   }
-  return { startMs: start.getTime(), endMs: nowMs + 1 };
+  return new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+}
+
+// เลื่อนด้วยวันที่ตามปฏิทิน ไม่ใช่บวก 24 ชั่วโมง เพื่อให้ถูกแม้ timezone ของเครื่องมีเวลาออมแสง
+function addPeriods(period: Exclude<StatsPeriod, 'all'>, start: Date, steps: number): Date {
+  if (period === 'day') return new Date(start.getFullYear(), start.getMonth(), start.getDate() + steps);
+  if (period === 'week') return new Date(start.getFullYear(), start.getMonth(), start.getDate() + steps * 7);
+  return new Date(start.getFullYear(), start.getMonth() + steps, 1);
+}
+
+// ช่วงเต็มของวัน/สัปดาห์/เดือนที่มี anchor อยู่ ไม่ตัดที่เวลาปัจจุบัน
+// เพราะบันทึกย้อนหลังห้ามอยู่ในอนาคตอยู่แล้ว และกราฟต้องเห็นวันที่ยังมาไม่ถึงเป็นช่องว่าง
+export function periodWindow(period: StatsPeriod, anchorMs: number): TimeWindow {
+  if (period === 'all') return { startMs: -Infinity, endMs: Infinity };
+  const start = periodStart(period, anchorMs);
+  return { startMs: start.getTime(), endMs: addPeriods(period, start, 1).getTime() };
+}
+
+export function shiftAnchor(period: StatsPeriod, anchorMs: number, steps: number): number {
+  if (period === 'all') return anchorMs;
+  return addPeriods(period, periodStart(period, anchorMs), steps).getTime();
+}
+
+export function containsNow(period: StatsPeriod, anchorMs: number, nowMs: number): boolean {
+  const window = periodWindow(period, anchorMs);
+  return nowMs >= window.startMs && nowMs < window.endMs;
 }
 
 function overlapMs(startMs: number, endMs: number, window: TimeWindow): number {
   return Math.max(0, Math.min(endMs, window.endMs) - Math.max(startMs, window.startMs));
 }
 
-function practiceDurationMs(session: PracticeSession, window: TimeWindow, period: StatsPeriod): number {
-  if (period === 'all') return session.durationSec * 1000;
+function practiceDurationMs(session: PracticeSession, window: TimeWindow): number {
+  if (window.startMs === -Infinity && window.endMs === Infinity) return session.durationSec * 1000;
   const intervals = session.runIntervals;
   if (intervals && intervals.length > 0) {
     const durationMs = intervals.reduce((sum, interval) => sum + overlapMs(Date.parse(interval.startedAt), Date.parse(interval.endedAt), window), 0);
@@ -63,23 +91,29 @@ function inWindow(timestamp: string, window: TimeWindow): boolean {
   return ms >= window.startMs && ms < window.endMs;
 }
 
+export function practiceInWindow(session: PracticeSession, window: TimeWindow): boolean {
+  return practiceDurationMs(session, window) > 0 || (session.durationSec === 0 && inWindow(session.endedAt, window));
+}
+
+export function chantInWindow(chant: ChantSession, window: TimeWindow): boolean {
+  return inWindow(chant.endedAt, window);
+}
+
 export function buildRecordStats(
   sessions: PracticeSession[], chants: ChantSession[], baseline: LegacyBaseline | null,
-  period: StatsPeriod, nowMs = Date.now(),
+  period: StatsPeriod, anchorMs = Date.now(),
 ): RecordStats {
-  const window = periodWindow(period, nowMs);
+  const window = periodWindow(period, anchorMs);
   const counts: Record<PracticeType, number> = { sitting: 0, walking: 0 };
   const durationMs: Record<PracticeType, number> = { sitting: 0, walking: 0 };
   for (const session of sessions) {
-    const portionMs = practiceDurationMs(session, window, period);
-    if (portionMs > 0 || (session.durationSec === 0 && inWindow(session.endedAt, window))) {
-      counts[session.type] += 1;
-      durationMs[session.type] += portionMs;
-    }
+    if (!practiceInWindow(session, window)) continue;
+    counts[session.type] += 1;
+    durationMs[session.type] += practiceDurationMs(session, window);
   }
   const chanting: ChantTotals = { count: 0, rounds: 0, durationSec: 0, timedCount: 0 };
   for (const chant of chants) {
-    if (!inWindow(chant.endedAt, window)) continue;
+    if (!chantInWindow(chant, window)) continue;
     chanting.count += 1;
     chanting.rounds += chant.rounds ?? 0;
     if (chant.durationSec !== null) {
@@ -93,4 +127,43 @@ export function buildRecordStats(
     chanting,
     legacySittingSec: period === 'all' ? baseline?.sittingDurationSec ?? 0 : 0,
   };
+}
+
+function earliestRecordMs(sessions: PracticeSession[], chants: ChantSession[]): number | null {
+  let earliest = Infinity;
+  for (const session of sessions) earliest = Math.min(earliest, Date.parse(session.startedAt));
+  for (const chant of chants) earliest = Math.min(earliest, Date.parse(chant.startedAt));
+  return Number.isFinite(earliest) ? earliest : null;
+}
+
+// แท่งกราฟ: สัปดาห์ = 7 วัน, เดือน = รายวัน, ทั้งหมด = รายเดือนย้อนหลังไม่เกิน 12 เดือน
+// วันเดียวไม่มีกราฟ เพราะส่วนใหญ่ฝึกวันละไม่กี่ครั้ง แท่งรายชั่วโมงจะว่างเกือบหมด
+export function buildBuckets(
+  sessions: PracticeSession[], chants: ChantSession[], period: StatsPeriod, anchorMs: number, nowMs = Date.now(),
+): StatsBucket[] {
+  const starts: Date[] = [];
+  if (period === 'week' || period === 'month') {
+    const window = periodWindow(period, anchorMs);
+    for (let day = new Date(window.startMs); day.getTime() < window.endMs; day = addPeriods('day', day, 1)) starts.push(day);
+  } else if (period === 'all') {
+    const current = periodStart('month', nowMs);
+    const earliest = earliestRecordMs(sessions, chants);
+    const first = earliest === null ? current : periodStart('month', Math.min(earliest, nowMs));
+    const oldest = addPeriods('month', current, -11);
+    for (let month = first < oldest ? oldest : first; month <= current; month = addPeriods('month', month, 1)) starts.push(month);
+  } else {
+    return [];
+  }
+  const unit = period === 'all' ? 'month' : 'day';
+  return starts.map((start) => {
+    const window = { startMs: start.getTime(), endMs: addPeriods(unit, start, 1).getTime() };
+    const bucket: StatsBucket = { ...window, sittingSec: 0, walkingSec: 0, chantCount: 0 };
+    for (const session of sessions) {
+      const seconds = Math.floor(practiceDurationMs(session, window) / 1000);
+      if (session.type === 'sitting') bucket.sittingSec += seconds;
+      else bucket.walkingSec += seconds;
+    }
+    for (const chant of chants) if (chantInWindow(chant, window)) bucket.chantCount += 1;
+    return bucket;
+  });
 }

@@ -1,9 +1,9 @@
 import { icon } from './icons';
 import { loadSettings, saveSettings } from '../data/db';
 import { defaultSettings, type ActiveSession, type BackgroundSoundId, type BellInterval, type ChantSession, type CustomPrayer, type LegacyBaseline, type PracticeSession, type PracticeType, type Settings } from '../data/models';
-import { discardPracticeSession, finishPracticeSession, getActiveSession, listPracticeSessions, pausePracticeSession, resumePracticeSession, startPracticeSession } from '../data/practiceRepository';
-import { addChantSession, deleteCustomPrayer, listChantSessions, listCustomPrayers, saveCustomPrayer } from '../data/prayerRepository';
-import { deleteLegacyBaseline, getLegacyBaseline, saveLegacyBaseline } from '../data/recordsRepository';
+import { deletePracticeSession, discardPracticeSession, finishPracticeSession, getActiveSession, listPracticeSessions, savePracticeSession, pausePracticeSession, resumePracticeSession, startPracticeSession } from '../data/practiceRepository';
+import { addChantSession, deleteChantSession, deleteCustomPrayer, listChantSessions, listCustomPrayers, saveChantSession, saveCustomPrayer } from '../data/prayerRepository';
+import { getLegacyBaseline } from '../data/recordsRepository';
 import { renderActiveTimer, renderCompletedSession, renderDurationPicker, renderPracticeHome, renderReadyScreen } from '../features/practice/view';
 import { elapsedMs, formatClock, isDue, remainingMs } from '../features/practice/timer';
 import { PracticeAudio } from '../features/practice/audio';
@@ -13,13 +13,15 @@ import { downloadJson } from './html';
 import { backupFileName, readBackup } from '../data/backup';
 import { clearHistory, collectBackup, restoreBackup } from '../data/backupRepository';
 import { adoptPendingBellLog, appendBellLog, bellLogForSession, formatBellLog, patchBellLog, PENDING, type BellKind } from '../features/practice/bellLog';
-import { findPrayer } from '../content/prayers';
+import { findPrayer, prayers } from '../content/prayers';
+import { newId } from '../data/id';
 import { renderCustomPrayerForm, renderPrayerDetail, renderPrayerList, type PrayerEntry } from '../features/prayers/view';
-import { renderRecords, type HistoryFilter } from '../features/records/view';
-import { buildRecordStats, type StatsPeriod } from '../features/records/stats';
+import { localDateInput, renderBackfillForm, renderRecords, type BackfillDraft, type HistoryFilter } from '../features/records/view';
+import { buildRecordStats, containsNow, shiftAnchor, type StatsPeriod } from '../features/records/stats';
+import { BackfillError, buildManualChant, buildManualPractice } from '../features/records/backfill';
 
 type Tab = 'practice' | 'prayers' | 'records';
-type Route = { tab: Tab; page: 'home' | 'picker' | 'ready' | 'session' | 'completed' | 'detail' | 'new' | 'edit'; type?: PracticeType; prayerId?: string; custom?: boolean };
+type Route = { tab: Tab; page: 'home' | 'picker' | 'ready' | 'session' | 'completed' | 'detail' | 'new' | 'edit' | 'add'; type?: PracticeType; prayerId?: string; custom?: boolean };
 
 function routeFromHash(): Route {
   const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -30,7 +32,7 @@ function routeFromHash(): Route {
     }
     return parts[1] ? { tab: 'prayers', page: 'detail', prayerId: parts[1] } : { tab: 'prayers', page: 'home' };
   }
-  if (parts[0] === 'records') return { tab: 'records', page: 'home' };
+  if (parts[0] === 'records') return { tab: 'records', page: parts[1] === 'add' ? 'add' : 'home' };
   if (parts[0] === 'practice' && parts[1] === 'session') return { tab: 'practice', page: 'session' };
   if (parts[0] === 'practice' && parts[1] === 'completed') return { tab: 'practice', page: 'completed' };
   if (parts[0] === 'practice' && parts[1] === 'ready' && (parts[2] === 'sitting' || parts[2] === 'walking')) {
@@ -48,7 +50,7 @@ function navItem(tab: Tab, current: Tab, label: string, iconName: 'lotus' | 'boo
 }
 
 function todaySummary(sessions: PracticeSession[]): { count: number; durationSec: number } {
-  const today = buildRecordStats(sessions, [], null, 'today');
+  const today = buildRecordStats(sessions, [], null, 'day');
   return {
     count: today.sitting.count + today.walking.count,
     durationSec: today.sitting.durationSec + today.walking.durationSec,
@@ -62,7 +64,12 @@ export class App {
   private customPrayers: CustomPrayer[] = [];
   private chants: ChantSession[] = [];
   private baseline: LegacyBaseline | null = null;
-  private statsPeriod: StatsPeriod = 'today';
+  private statsPeriod: StatsPeriod = 'day';
+  // null = ช่วงปัจจุบันเสมอ ไม่เก็บเป็นเวลาตายตัว เพราะ PWA ค้างในเครื่องข้ามคืนได้
+  // ถ้าเก็บเป็นตัวเลข เปิดแอปเช้าวันใหม่จะยังค้างอยู่ที่ "เมื่อวาน"
+  private statsAnchorMs: number | null = null;
+  private backfillDraft: BackfillDraft | null = null;
+  private backfillMessage: { tone: 'ok' | 'error'; text: string } | null = null;
   private historyFilter: HistoryFilter = 'all';
   private historyVisibleCount = 20;
   private audioStates = new Map<string, 'checking' | 'available' | 'missing'>();
@@ -83,7 +90,7 @@ export class App {
     this.root.addEventListener('click', (event) => void this.onClick(event));
     this.root.addEventListener('change', (event) => void this.onChange(event));
     this.root.addEventListener('submit', (event) => void this.onSubmit(event));
-    window.addEventListener('hashchange', () => { this.savedPrayerId = null; this.render(); });
+    window.addEventListener('hashchange', () => { this.savedPrayerId = null; this.backfillMessage = null; this.render(); });
     window.addEventListener('pageshow', () => { if (this.started) void this.refreshFromDatabase(); });
     document.addEventListener('visibilitychange', () => {
       if (this.started && document.visibilityState === 'visible') void this.refreshFromDatabase();
@@ -139,8 +146,10 @@ export class App {
       if (prayer?.audioFile && !this.audioStates.has(prayer.id)) void this.checkPrayerAudio(prayer);
     } else if (route.tab === 'prayers') {
       content = renderPrayerList(this.customPrayers);
+    } else if (route.tab === 'records' && route.page === 'add') {
+      content = renderBackfillForm(this.currentBackfillDraft(), this.backfillPrayers(), this.backfillMessage);
     } else if (route.tab === 'records') {
-      content = renderRecords(this.sessions, this.chants, this.baseline, this.statsPeriod, this.historyFilter, this.historyVisibleCount);
+      content = renderRecords(this.sessions, this.chants, this.baseline, this.statsPeriod, this.statsAnchorMs ?? Date.now(), this.historyFilter, this.historyVisibleCount);
     } else {
       content = renderPracticeHome(this.settings, this.active, todaySummary(this.sessions));
     }
@@ -237,10 +246,44 @@ export class App {
     if (route.tab === 'records') {
       if (action === 'records-period') {
         const period = button.dataset.value;
-        if (period === 'today' || period === 'week' || period === 'month' || period === 'all') {
+        if (period === 'day' || period === 'week' || period === 'month' || period === 'all') {
           this.statsPeriod = period;
+          this.statsAnchorMs = null;
+          this.historyVisibleCount = 20;
           this.render();
         }
+      } else if (action === 'records-shift') {
+        const step = Number(button.dataset.value);
+        if (step !== 1 && step !== -1) return;
+        const now = Date.now();
+        const anchor = shiftAnchor(this.statsPeriod, this.statsAnchorMs ?? now, step);
+        if (anchor > now) return;
+        this.statsAnchorMs = containsNow(this.statsPeriod, anchor, now) ? null : anchor;
+        this.historyVisibleCount = 20;
+        this.render();
+      } else if (action === 'records-jump') {
+        const period = button.dataset.period;
+        const anchor = Number(button.dataset.anchor);
+        if ((period !== 'day' && period !== 'month') || !Number.isFinite(anchor) || anchor > Date.now()) return;
+        this.statsPeriod = period;
+        this.statsAnchorMs = containsNow(period, anchor, Date.now()) ? null : anchor;
+        this.historyVisibleCount = 20;
+        this.render();
+      } else if (action === 'delete-record') {
+        const id = button.dataset.id;
+        const kind = button.dataset.kind;
+        if (!id || (kind !== 'practice' && kind !== 'chant')) return;
+        if (!window.confirm('ลบบันทึกนี้ใช่ไหม? ลบแล้วย้อนกลับไม่ได้')) return;
+        await this.runSessionAction(async () => {
+          if (kind === 'practice') {
+            await deletePracticeSession(id);
+            this.sessions = this.sessions.filter((item) => item.id !== id);
+          } else {
+            await deleteChantSession(id);
+            this.chants = this.chants.filter((item) => item.id !== id);
+          }
+          this.render();
+        });
       } else if (action === 'history-filter') {
         const filter = button.dataset.value;
         if (filter === 'all' || filter === 'sitting' || filter === 'walking' || filter === 'chanting') {
@@ -251,13 +294,6 @@ export class App {
       } else if (action === 'history-more') {
         this.historyVisibleCount += 20;
         this.render();
-      } else if (action === 'delete-legacy' && this.baseline) {
-        if (!window.confirm('ลบเฉพาะยอดนั่งสมาธิที่นำมาจากแอปเดิมใช่ไหม? ประวัติที่ฝึกในแอปนี้จะยังอยู่')) return;
-        await this.runSessionAction(async () => {
-          await deleteLegacyBaseline();
-          this.baseline = null;
-          this.render();
-        });
       }
       return;
     }
@@ -401,21 +437,12 @@ export class App {
   private async onSubmit(event: SubmitEvent): Promise<void> {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
-    if (form.id !== 'chant-form' && form.id !== 'custom-prayer-form' && form.id !== 'legacy-form') return;
+    if (form.id !== 'chant-form' && form.id !== 'custom-prayer-form' && form.id !== 'backfill-form') return;
     event.preventDefault();
     if (this.busy || this.storageIssue) return;
     const values = new FormData(form);
-    if (form.id === 'legacy-form') {
-      const hours = Number(values.get('hours'));
-      const minutes = Number(values.get('minutes'));
-      const asOfDate = String(values.get('asOfDate') ?? '');
-      const note = String(values.get('note') ?? '').trim();
-      if (!Number.isInteger(hours) || hours < 0 || hours > 99999 || !Number.isInteger(minutes) || minutes < 0 || minutes > 59 ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) || note.length > 200) return;
-      await this.runSessionAction(async () => {
-        this.baseline = await saveLegacyBaseline(hours, minutes, asOfDate, note);
-        this.render();
-      });
+    if (form.id === 'backfill-form') {
+      await this.saveBackfill(values);
       return;
     }
     if (form.id === 'custom-prayer-form') {
@@ -445,6 +472,70 @@ export class App {
       this.savedPrayerId = prayer.id;
       this.render();
     });
+  }
+
+  private currentBackfillDraft(): BackfillDraft {
+    const now = new Date();
+    // ค่าเริ่มต้นเป็นวันนี้ ต้นชั่วโมงที่แล้ว เพื่อให้กดบันทึกได้ทันทีโดยเวลาจบไม่เลยปัจจุบัน
+    const hour = new Date(now.getTime() - 3_600_000);
+    return this.backfillDraft ?? {
+      kind: 'sitting',
+      date: localDateInput(hour.getTime()),
+      time: `${String(hour.getHours()).padStart(2, '0')}:00`,
+      prayerId: prayers[0]?.id ?? '',
+    };
+  }
+
+  private backfillPrayers(): { id: string; title: string }[] {
+    return [
+      ...prayers.map((prayer) => ({ id: prayer.id, title: prayer.title })),
+      ...this.customPrayers.map((prayer) => ({ id: prayer.id, title: prayer.title })),
+    ];
+  }
+
+  // ฟอร์มเดียวรองรับทั้งสามกิจกรรม และจำค่าที่กรอกล่าสุดไว้
+  // เพราะการเติมย้อนหลังมักทำทีละหลายวันติดกัน ไม่ต้องเลือกกิจกรรมและเวลาใหม่ทุกครั้ง
+  private async saveBackfill(values: FormData): Promise<void> {
+    const kind = String(values.get('kind') ?? '');
+    if (kind !== 'sitting' && kind !== 'walking' && kind !== 'chanting') return;
+    const date = String(values.get('date') ?? '');
+    const time = String(values.get('time') ?? '');
+    const prayerId = String(values.get('prayerId') ?? '');
+    const number = (name: string): number | null => {
+      const text = String(values.get(name) ?? '').trim();
+      return text ? Number(text) : null;
+    };
+    const durationMin = number('durationMin');
+    this.backfillDraft = { kind, date, time, prayerId: prayerId || this.currentBackfillDraft().prayerId };
+    try {
+      const now = Date.now();
+      if (kind === 'chanting') {
+        const prayer = this.backfillPrayers().find((item) => item.id === prayerId);
+        const item = buildManualChant(newId(), prayerId, prayer?.title ?? '', date, time, number('rounds'), durationMin, now);
+        await this.runSessionAction(async () => {
+          await saveChantSession(item);
+          this.chants = [item, ...this.chants];
+          this.backfillMessage = { tone: 'ok', text: `บันทึกแล้ว: สวด${item.prayerTitleSnapshot} · ${this.backfillDateLabel(item.startedAt)}` };
+        });
+      } else {
+        const session = buildManualPractice(newId(), kind, date, time, durationMin, now);
+        await this.runSessionAction(async () => {
+          await savePracticeSession(session);
+          this.sessions = [session, ...this.sessions];
+          const activity = kind === 'sitting' ? 'นั่งสมาธิ' : 'เดินจงกรม';
+          this.backfillMessage = { tone: 'ok', text: `บันทึกแล้ว: ${activity} ${durationMin} นาที · ${this.backfillDateLabel(session.startedAt)}` };
+        });
+      }
+    } catch (error) {
+      if (!(error instanceof BackfillError)) throw error;
+      this.backfillMessage = { tone: 'error', text: error.message };
+    }
+    this.render();
+    window.scrollTo({ top: 0 });
+  }
+
+  private backfillDateLabel(iso: string): string {
+    return new Intl.DateTimeFormat('th-TH', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
   }
 
   private prayerForRoute(route: Route): PrayerEntry | null {
