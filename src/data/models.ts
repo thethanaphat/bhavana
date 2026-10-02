@@ -72,6 +72,10 @@ export interface Settings {
   walking: PracticePreference;
   textScale: number;
   theme: 'system' | 'light' | 'dark';
+  // บทที่เลือกดูในกราฟรอบสวด null = ทุกบท จำไว้เพราะส่วนใหญ่ติดตามบทเดียวต่อเนื่องทั้งเดือน
+  chantChartPrayerId: string | null;
+  // เป้ารอบต่อเดือน แยกตาม prayerId ('all' = รวมทุกบท)
+  chantGoals: Record<string, number>;
 }
 
 export interface LegacyBaseline {
@@ -88,5 +92,7 @@ export function defaultSettings(): Settings {
     walking: { durationMin: 15, customMinutes: 25, bellIntervalMin: 0, backgroundSoundId: null },
     textScale: 1,
     theme: 'system',
+    chantChartPrayerId: null,
+    chantGoals: {},
   };
 }

@@ -73,6 +73,8 @@ History แยกนั่ง/เดิน/สวด แสดงวันที
 - **ลบรายการ**: ทุกการ์ดในประวัติมีปุ่มลบพร้อมยืนยัน ไม่ทำ “แก้ไข” เพราะลบแล้วเพิ่มใหม่ได้ผลเท่ากันและโค้ดน้อยกว่า
 - **สถิติ**: ช่วง วัน/สัปดาห์/เดือน/ทั้งหมด เลื่อนย้อนด้วยปุ่ม ‹ › ได้ (`shiftAnchor`) กราฟแท่ง CSS ล้วนไม่ใช้ไลบรารี: สัปดาห์ = 7 วัน, เดือน = รายวัน, ทั้งหมด = รายเดือนย้อนหลังไม่เกิน 12 เดือน แท่งซ้อนนั่ง/เดิน จุดม่วงใต้แท่ง = วันที่มีการสวด แตะแท่งเพื่อลงไปดูวัน/เดือนนั้น ประวัติด้านล่างแสดงเฉพาะช่วงที่เลือก แอปเก็บ anchor เป็น `null` เมื่อดูช่วงปัจจุบัน เพื่อให้ PWA ที่ค้างข้ามคืนเปิดมาเจอ “วันนี้” ไม่ใช่เมื่อวาน
 
+- **กราฟรอบสวด + เป้ารายเดือน**: การ์ดแยกใต้กราฟนั่ง/เดิน เลือกบท (ทุกบท/บทหลัก/บทส่วนตัว/บทที่ลบไปแล้วแต่มีประวัติ) แท่ง = ผลรวมรอบต่อวันหรือต่อเดือน ตั้งเป้ารอบต่อเดือนแยกต่อบทได้ (`Settings.chantGoals`, key `'all'` = ทุกบท) เป้าคิดตามเดือนที่กำลังดูเสมอ เดือนปัจจุบันบอกรอบที่เหลือและต้องเฉลี่ยวันละกี่รอบ (นับวันนี้ด้วย) บทที่เลือกจำไว้ใน `Settings.chantChartPrayerId` เพราะมักติดตามบทเดียวทั้งเดือน ที่มา: เจ้าของตั้งเป้าพระคาถาเงินล้าน 1,000 รอบ/เดือน
+
 ### รูปแบบข้อมูลหลัก
 
 ```text
@@ -85,7 +87,8 @@ ChantSession: id, prayerId, prayerTitleSnapshot, rounds|null,
 ActiveSession: id, type, startedAt, accumulatedPauseMs,
   pausedAt|null, plannedDurationSec|null, settings snapshot,
   completedIntervals(optional), runningSince(optional)
-Settings: ค่า preset/ระฆัง/เสียงพื้นหลังล่าสุดแยก sitting/walking, text size, theme
+Settings: ค่า preset/ระฆัง/เสียงพื้นหลังล่าสุดแยก sitting/walking, text size, theme,
+  chantChartPrayerId|null, chantGoals{prayerId|'all': รอบต่อเดือน}
 LegacyBaseline: sittingDurationSec, asOfDate, note
 CustomPrayer: id, title, text, createdAt, updatedAt
 ```

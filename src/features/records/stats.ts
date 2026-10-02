@@ -32,6 +32,7 @@ export interface StatsBucket {
   sittingSec: number;
   walkingSec: number;
   chantCount: number;
+  chantRounds: number;
 }
 
 function periodStart(period: Exclude<StatsPeriod, 'all'>, anchorMs: number): Date {
@@ -157,13 +158,49 @@ export function buildBuckets(
   const unit = period === 'all' ? 'month' : 'day';
   return starts.map((start) => {
     const window = { startMs: start.getTime(), endMs: addPeriods(unit, start, 1).getTime() };
-    const bucket: StatsBucket = { ...window, sittingSec: 0, walkingSec: 0, chantCount: 0 };
+    const bucket: StatsBucket = { ...window, sittingSec: 0, walkingSec: 0, chantCount: 0, chantRounds: 0 };
     for (const session of sessions) {
       const seconds = Math.floor(practiceDurationMs(session, window) / 1000);
       if (session.type === 'sitting') bucket.sittingSec += seconds;
       else bucket.walkingSec += seconds;
     }
-    for (const chant of chants) if (chantInWindow(chant, window)) bucket.chantCount += 1;
+    for (const chant of chants) {
+      if (!chantInWindow(chant, window)) continue;
+      bucket.chantCount += 1;
+      bucket.chantRounds += chant.rounds ?? 0;
+    }
     return bucket;
   });
+}
+
+export interface GoalProgress {
+  monthStartMs: number;
+  rounds: number;
+  goal: number;
+  // นับวันนี้ด้วย เพราะวันนี้ยังสวดได้อีก; null = เดือนที่ผ่านไปแล้วหรือยังมาไม่ถึง
+  daysLeft: number | null;
+  perDayNeeded: number | null;
+}
+
+// เป้าเป็นรายเดือนเสมอ ไม่ว่ากำลังดูช่วงไหน จึงใช้เดือนที่ anchor อยู่
+// ยกเว้นมุมมอง "ทั้งหมด" ที่ไม่มี anchor ความหมาย ให้ใช้เดือนปัจจุบัน
+export function monthGoalProgress(
+  chants: ChantSession[], prayerId: string | null, goal: number, period: StatsPeriod, anchorMs: number, nowMs = Date.now(),
+): GoalProgress {
+  const window = periodWindow('month', period === 'all' ? nowMs : anchorMs);
+  let rounds = 0;
+  for (const chant of chants) {
+    if ((prayerId === null || chant.prayerId === prayerId) && chantInWindow(chant, window)) rounds += chant.rounds ?? 0;
+  }
+  let daysLeft: number | null = null;
+  if (nowMs >= window.startMs && nowMs < window.endMs) {
+    const today = periodStart('day', nowMs);
+    const end = new Date(window.endMs);
+    daysLeft = Math.round((end.getTime() - today.getTime()) / 86_400_000);
+  }
+  const remaining = Math.max(0, goal - rounds);
+  return {
+    monthStartMs: window.startMs, rounds, goal, daysLeft,
+    perDayNeeded: daysLeft && remaining ? Math.ceil(remaining / daysLeft) : null,
+  };
 }

@@ -3,8 +3,8 @@ import { escapeHtml } from '../../app/html';
 import type { ChantSession, LegacyBaseline, PracticeSession } from '../../data/models';
 import type { BackfillKind } from './backfill';
 import {
-  buildBuckets, buildRecordStats, chantInWindow, containsNow, periodWindow, practiceInWindow,
-  type StatsBucket, type StatsPeriod, type TimeWindow,
+  buildBuckets, buildRecordStats, chantInWindow, containsNow, monthGoalProgress, periodWindow, practiceInWindow,
+  type GoalProgress, type StatsBucket, type StatsPeriod, type TimeWindow,
 } from './stats';
 
 export type HistoryFilter = 'all' | 'sitting' | 'walking' | 'chanting';
@@ -23,6 +23,12 @@ export interface BackfillDraft {
 export interface BackfillPrayerOption {
   id: string;
   title: string;
+}
+
+export interface ChantChartOptions {
+  prayers: BackfillPrayerOption[];
+  prayerId: string | null;
+  goals: Record<string, number>;
 }
 
 function durationText(seconds: number): string {
@@ -170,10 +176,76 @@ function renderChart(period: StatsPeriod, buckets: StatsBucket[], nowMs: number)
     </div>`;
 }
 
+const number = new Intl.NumberFormat('th-TH');
+
+function goalKey(prayerId: string | null): string {
+  return prayerId ?? 'all';
+}
+
+function renderGoal(progress: GoalProgress | null, prayerId: string | null): string {
+  const month = (ms: number) => new Intl.DateTimeFormat('th-TH', { month: 'long' }).format(new Date(ms));
+  const form = `
+      <details class="goal-edit"${progress ? '' : ' open'}>
+        <summary>${progress ? 'แก้เป้ารายเดือน' : 'ตั้งเป้ารายเดือน'}</summary>
+        <form id="chant-goal-form" data-key="${escapeHtml(goalKey(prayerId))}">
+          <div class="input-with-unit"><input name="goal" type="number" inputmode="numeric" min="1" max="999999" placeholder="เช่น 1000" value="${progress?.goal ?? ''}"><span>รอบ/เดือน</span></div>
+          <button type="submit">บันทึก</button>
+        </form>
+        ${progress ? '<p class="field-note">เว้นว่างแล้วบันทึก เพื่อยกเลิกเป้า</p>' : ''}
+      </details>`;
+  if (!progress) return `<div class="goal-card">${form}</div>`;
+  const percent = Math.min(100, Math.round((progress.rounds / progress.goal) * 100));
+  const reached = progress.rounds >= progress.goal;
+  let note: string;
+  if (reached) note = 'ถึงเป้าแล้ว';
+  else if (progress.daysLeft !== null) note = `เหลือ ${number.format(progress.goal - progress.rounds)} รอบ · อีก ${progress.daysLeft} วัน · เฉลี่ยวันละ <strong>${number.format(progress.perDayNeeded ?? 0)}</strong> รอบ`;
+  else note = `ทำได้ ${percent}% ของเป้า`;
+  return `
+    <div class="goal-card${reached ? ' reached' : ''}">
+      <div class="goal-head"><span>เป้าเดือน${month(progress.monthStartMs)}</span><span><strong>${number.format(progress.rounds)}</strong> / ${number.format(progress.goal)} รอบ</span></div>
+      <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div>
+      <p class="goal-note">${note}</p>
+      ${form}
+    </div>`;
+}
+
+function renderChantChart(
+  period: StatsPeriod, buckets: StatsBucket[], options: ChantChartOptions, anchorMs: number, chants: ChantSession[], nowMs: number,
+): string {
+  const chips = [{ id: '', title: 'ทุกบท' }, ...options.prayers].map((prayer) => {
+    const selected = (prayer.id || null) === options.prayerId;
+    return `<button type="button" class="${selected ? 'selected' : ''}" data-action="chant-prayer" data-value="${escapeHtml(prayer.id)}" aria-pressed="${selected}">${escapeHtml(prayer.title)}</button>`;
+  }).join('');
+  const goal = options.goals[goalKey(options.prayerId)];
+  const progress = goal ? monthGoalProgress(chants, options.prayerId, goal, period, anchorMs, nowMs) : null;
+  const max = Math.max(0, ...buckets.map((bucket) => bucket.chantRounds));
+  const total = buckets.reduce((sum, bucket) => sum + bucket.chantRounds, 0);
+  const drill: StatsPeriod = period === 'all' ? 'month' : 'day';
+  const columns = buckets.map((bucket, index) => {
+    const isNow = nowMs >= bucket.startMs && nowMs < bucket.endMs;
+    const name = `${bucketName(period, bucket)}: ${bucket.chantRounds ? `${number.format(bucket.chantRounds)} รอบ` : 'ไม่มีรอบสวด'}`;
+    return `<button type="button" class="chart-col${isNow ? ' now' : ''}" data-action="records-jump" data-period="${drill}" data-anchor="${bucket.startMs}" aria-label="${name}" ${bucket.startMs > nowMs ? 'disabled' : ''}>
+      <span class="chart-track"><span class="chart-bar rounds" style="height:${max ? (bucket.chantRounds / max) * 100 : 0}%"></span></span>
+      <span class="chart-dot"></span>
+      <span class="chart-label">${bucketLabel(period, bucket, index)}</span>
+    </button>`;
+  }).join('');
+  return `
+    <div class="chart-card chant-card">
+      <div class="chant-card-title"><span class="eyebrow">รอบการสวด</span></div>
+      <div class="chant-chips" aria-label="เลือกบทสวด">${chips}</div>
+      ${renderGoal(progress, options.prayerId)}
+      ${buckets.length ? `
+      <div class="chart-head"><span>รวม <strong>${number.format(total)}</strong> รอบ</span><span>${max ? `สูงสุด ${number.format(max)} รอบ` : ''}</span></div>
+      <div class="chart-bars" style="--cols:${buckets.length}">${columns}</div>` : ''}
+    </div>`;
+}
+
 export function renderRecords(
   sessions: PracticeSession[], chants: ChantSession[], baseline: LegacyBaseline | null,
-  period: StatsPeriod, anchorMs: number, filter: HistoryFilter, visibleCount: number, nowMs = Date.now(),
+  period: StatsPeriod, anchorMs: number, filter: HistoryFilter, visibleCount: number, chantOptions: ChantChartOptions, nowMs = Date.now(),
 ): string {
+  const chartChants = chantOptions.prayerId === null ? chants : chants.filter((chant) => chant.prayerId === chantOptions.prayerId);
   const stats = buildRecordStats(sessions, chants, baseline, period, anchorMs);
   const window = periodWindow(period, anchorMs);
   const items = historyItems(sessions, chants, filter, window);
@@ -197,6 +269,7 @@ export function renderRecords(
         <div><span>สวดมนต์</span><strong>${stats.chanting.count} ครั้ง</strong><small>${stats.chanting.rounds} รอบ${stats.chanting.timedCount ? ` · ${durationText(stats.chanting.durationSec)}` : ''}</small></div>
       </div>
       ${renderChart(period, buildBuckets(sessions, chants, period, anchorMs, nowMs), nowMs)}
+      ${renderChantChart(period, buildBuckets([], chartChants, period, anchorMs, nowMs), chantOptions, anchorMs, chants, nowMs)}
       <p class="stats-note">เวลานั่งและเดินเป็นเวลาที่ฝึกจริง จำนวนรอบสวดนับแยกจากนาที</p>
     </section>
     <section class="history-section" aria-labelledby="history-title">

@@ -96,6 +96,15 @@ function checkLegacyBaseline(value: unknown, errors: string[]): LegacyBaseline |
   return { id: 'sitting', sittingDurationSec: value.sittingDurationSec, asOfDate: value.asOfDate, note: typeof value.note === 'string' ? value.note : '' };
 }
 
+function readGoals(value: unknown): Record<string, number> {
+  const goals: Record<string, number> = {};
+  if (!isRecord(value)) return goals;
+  for (const [key, goal] of Object.entries(value)) {
+    if (typeof goal === 'number' && Number.isInteger(goal) && goal >= 1 && goal <= 999999) goals[key] = goal;
+  }
+  return goals;
+}
+
 // การตั้งค่าที่ผิดรูปไม่ควรทำให้ทั้งไฟล์ใช้ไม่ได้ เพราะมันสร้างใหม่ได้ง่าย
 // ต่างจากประวัติการฝึกที่หายแล้วหายเลย จึงถอยไปใช้ค่าเริ่มต้นแทนการปฏิเสธไฟล์
 function readSettings(value: unknown): Settings {
@@ -116,6 +125,8 @@ function readSettings(value: unknown): Settings {
     walking: preference(value.walking, defaults.walking),
     textScale: typeof value.textScale === 'number' && value.textScale >= 0.9 && value.textScale <= 1.4 ? value.textScale : defaults.textScale,
     theme: value.theme === 'light' || value.theme === 'dark' || value.theme === 'system' ? value.theme : defaults.theme,
+    chantChartPrayerId: typeof value.chantChartPrayerId === 'string' && value.chantChartPrayerId ? value.chantChartPrayerId : null,
+    chantGoals: readGoals(value.chantGoals),
   };
 }
 

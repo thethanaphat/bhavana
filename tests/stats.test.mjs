@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildBuckets, buildRecordStats, containsNow, periodWindow, shiftAnchor } from '../.test-build/features/records/stats.js';
+import { buildBuckets, buildRecordStats, containsNow, monthGoalProgress, periodWindow, shiftAnchor } from '../.test-build/features/records/stats.js';
 
 function at(year, month, day, hour, minute) {
   return new Date(year, month - 1, day, hour, minute).toISOString();
@@ -106,4 +106,39 @@ test('buckets: week has 7 days, month has a bar per day, all-time is monthly', (
   assert.equal(all.length, 2);
   assert.equal(all[0].sittingSec, 1200);
   assert.equal(all[1].chantCount, 1);
+});
+
+function chantAt(prayerId, start, rounds) {
+  return { id: `${prayerId}-${start}`, prayerId, prayerTitleSnapshot: prayerId, rounds, startedAt: start, endedAt: start, durationSec: null };
+}
+
+test('chant buckets sum rounds per day', () => {
+  const now = new Date(2026, 9, 2, 21).getTime();
+  const chants = [chantAt('millionaire-chant', at(2026, 10, 1, 7, 0), 108), chantAt('millionaire-chant', at(2026, 10, 1, 20, 0), 9), chantAt('bahung', at(2026, 10, 2, 7, 0), null)];
+  const week = buildBuckets([], chants, 'week', now, now);
+  assert.equal(week[3].chantRounds, 117);
+  assert.equal(week[3].chantCount, 2);
+  assert.equal(week[4].chantRounds, 0);
+  assert.equal(week[4].chantCount, 1);
+});
+
+test('monthly goal counts only the chosen prayer and spreads the rest over remaining days', () => {
+  const now = new Date(2026, 9, 2, 21).getTime(); // 2 ต.ค. เหลือ 30 วันรวมวันนี้
+  const chants = [
+    chantAt('millionaire-chant', at(2026, 10, 1, 7, 0), 300),
+    chantAt('millionaire-chant', at(2026, 9, 30, 7, 0), 500), // เดือนก่อน ไม่นับ
+    chantAt('bahung', at(2026, 10, 2, 7, 0), 50),
+  ];
+  const progress = monthGoalProgress(chants, 'millionaire-chant', 1000, 'week', now, now);
+  assert.equal(progress.rounds, 300);
+  assert.equal(progress.daysLeft, 30);
+  assert.equal(progress.perDayNeeded, 24); // 700 / 30 ปัดขึ้น
+  assert.equal(monthGoalProgress(chants, null, 1000, 'day', now, now).rounds, 350);
+  const september = monthGoalProgress(chants, 'millionaire-chant', 400, 'month', new Date(2026, 8, 15).getTime(), now);
+  assert.equal(september.rounds, 500);
+  assert.equal(september.daysLeft, null);
+  assert.equal(september.perDayNeeded, null);
+  const allView = monthGoalProgress(chants, 'millionaire-chant', 200, 'all', new Date(2020, 0, 1).getTime(), now);
+  assert.equal(allView.rounds, 300);
+  assert.equal(allView.perDayNeeded, null); // ถึงเป้าแล้ว
 });

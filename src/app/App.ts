@@ -149,7 +149,7 @@ export class App {
     } else if (route.tab === 'records' && route.page === 'add') {
       content = renderBackfillForm(this.currentBackfillDraft(), this.backfillPrayers(), this.backfillMessage);
     } else if (route.tab === 'records') {
-      content = renderRecords(this.sessions, this.chants, this.baseline, this.statsPeriod, this.statsAnchorMs ?? Date.now(), this.historyFilter, this.historyVisibleCount);
+      content = renderRecords(this.sessions, this.chants, this.baseline, this.statsPeriod, this.statsAnchorMs ?? Date.now(), this.historyFilter, this.historyVisibleCount, this.chantChartOptions());
     } else {
       content = renderPracticeHome(this.settings, this.active, todaySummary(this.sessions));
     }
@@ -269,6 +269,11 @@ export class App {
         this.statsAnchorMs = containsNow(period, anchor, Date.now()) ? null : anchor;
         this.historyVisibleCount = 20;
         this.render();
+      } else if (action === 'chant-prayer') {
+        const value = button.dataset.value ?? '';
+        this.settings.chantChartPrayerId = value || null;
+        this.render();
+        await this.persistSettings();
       } else if (action === 'delete-record') {
         const id = button.dataset.id;
         const kind = button.dataset.kind;
@@ -437,12 +442,25 @@ export class App {
   private async onSubmit(event: SubmitEvent): Promise<void> {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
-    if (form.id !== 'chant-form' && form.id !== 'custom-prayer-form' && form.id !== 'backfill-form') return;
+    if (form.id !== 'chant-form' && form.id !== 'custom-prayer-form' && form.id !== 'backfill-form' && form.id !== 'chant-goal-form') return;
     event.preventDefault();
     if (this.busy || this.storageIssue) return;
     const values = new FormData(form);
     if (form.id === 'backfill-form') {
       await this.saveBackfill(values);
+      return;
+    }
+    if (form.id === 'chant-goal-form') {
+      const key = form.dataset.key;
+      const text = String(values.get('goal') ?? '').trim();
+      const goal = Number(text);
+      if (!key || (text && (!Number.isInteger(goal) || goal < 1 || goal > 999999))) return;
+      const goals = { ...this.settings.chantGoals };
+      if (text) goals[key] = goal;
+      else delete goals[key];
+      this.settings.chantGoals = goals;
+      this.render();
+      await this.persistSettings();
       return;
     }
     if (form.id === 'custom-prayer-form') {
@@ -484,6 +502,19 @@ export class App {
       time: `${String(hour.getHours()).padStart(2, '0')}:00`,
       prayerId: prayers[0]?.id ?? '',
     };
+  }
+
+  // รวมบทที่เคยสวดแต่ถูกลบไปแล้วด้วย ใช้ชื่อตอนบันทึก เพื่อให้ยังดูกราฟย้อนหลังของบทนั้นได้
+  private chantChartOptions(): { prayers: { id: string; title: string }[]; prayerId: string | null; goals: Record<string, number> } {
+    const list = this.backfillPrayers();
+    const known = new Set(list.map((prayer) => prayer.id));
+    for (const chant of this.chants) {
+      if (known.has(chant.prayerId)) continue;
+      known.add(chant.prayerId);
+      list.push({ id: chant.prayerId, title: chant.prayerTitleSnapshot });
+    }
+    const selected = this.settings.chantChartPrayerId;
+    return { prayers: list, prayerId: selected && known.has(selected) ? selected : null, goals: this.settings.chantGoals };
   }
 
   private backfillPrayers(): { id: string; title: string }[] {

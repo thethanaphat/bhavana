@@ -393,3 +393,27 @@ a { color: inherit; }
 .backfill-form .chant-only { display: none; }
 .backfill-form:has(input[name="kind"][value="chanting"]:checked) .chant-only { display: grid; }
 .backfill-form:has(input[name="kind"][value="chanting"]:checked) label > span.chant-only { display: inline; }
+
+/* กราฟรอบสวดและเป้ารายเดือน */
+.chant-card { margin-top: 10px; }
+.chant-card-title { margin: 0 2px 9px; }
+.chant-chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 -2px 12px; padding: 0 2px 3px; scrollbar-width: none; }
+.chant-chips button { flex: none; min-height: 36px; padding: 6px 11px; border: 1px solid #e3e0ec; border-radius: 10px; background: var(--white); color: var(--muted); font-size: 12px; }
+.chant-chips button.selected { border-color: #6d6594; background: #6d6594; color: #fff; font-weight: 700; }
+.chart-bar.rounds { background: #8b82b5; border-radius: 3px; }
+.goal-card { margin: 0 0 14px; padding: 13px; border-radius: 13px; background: #f3f1f8; }
+.goal-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: #5d5680; font-size: 12px; }
+.goal-head strong { color: var(--ink); font-size: 19px; }
+.goal-bar { height: 9px; margin: 9px 0 7px; border-radius: 5px; background: #e2deee; overflow: hidden; }
+.goal-bar span { display: block; height: 100%; border-radius: 5px; background: #6d6594; }
+.goal-card.reached .goal-bar span { background: var(--gold); }
+.goal-note { margin: 0; color: #5d5680; font-size: 12px; line-height: 1.55; }
+.goal-note strong { color: var(--ink); }
+.goal-edit summary { margin-top: 6px; color: #6d6594; font-size: 12px; text-decoration: underline; cursor: pointer; list-style: none; }
+.goal-edit summary::-webkit-details-marker { display: none; }
+.goal-card > .goal-edit:only-child summary { margin-top: 0; }
+.goal-edit form { display: flex; gap: 8px; margin-top: 9px; }
+.goal-edit .input-with-unit { flex: 1; }
+.goal-edit input { width: 100%; min-width: 0; min-height: 42px; padding: 8px 11px; border: 1px solid #d9d4e6; border-radius: 10px; background: #fff; color: var(--ink); font-size: 15px; }
+.goal-edit button { flex: none; min-height: 42px; padding: 0 15px; border: 0; border-radius: 10px; background: #6d6594; color: #fff; font-size: 13px; font-weight: 700; }
+.goal-edit .field-note { margin-top: 6px; }
