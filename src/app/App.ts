@@ -154,6 +154,13 @@ export class App {
       content = renderPracticeHome(this.settings, this.active, todaySummary(this.sessions));
     }
 
+    // ทั้งหน้าใช้สีของกิจกรรมที่กำลังทำ หน้ารวม (หน้าแรก บันทึก) ไม่ใส่ธีม แต่ละการ์ดข้างในใส่สีของตัวเอง
+    let theme: string | null = null;
+    if (route.tab === 'prayers') theme = 'chanting';
+    else if (route.page === 'session' && this.active) theme = this.active.type;
+    else if (route.page === 'completed' && this.lastFinished) theme = this.lastFinished.type;
+    else if (route.tab === 'practice' && route.type) theme = route.type;
+
     const title = route.tab === 'prayers' ? 'บทสวด' : route.tab === 'records' ? 'บันทึก' : 'ฝึก';
     document.title = `${title} · ภาวนา`;
     this.root.querySelector<HTMLAudioElement>('#prayer-audio')?.pause();
@@ -164,7 +171,7 @@ export class App {
           <button class="header-action" type="button" data-action="settings" aria-label="ข้อมูลและตั้งค่า">${icon('settings')}</button>
         </header>
         ${this.storageIssue ? `<div class="storage-warning" role="alert">เครื่องนี้ไม่สามารถบันทึกข้อมูลในเครื่องได้ โปรดลองเปิดแอปใหม่อีกครั้ง</div>` : ''}
-        <main id="main-content" class="main-content">${content}</main>
+        <main id="main-content" class="main-content${theme ? ` theme-${theme}` : ''}">${content}</main>
         <nav class="bottom-nav" aria-label="เมนูหลัก">
           ${navItem('practice', route.tab, 'ฝึก', 'lotus')}
           ${navItem('prayers', route.tab, 'บทสวด', 'book')}

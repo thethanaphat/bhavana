@@ -108,16 +108,16 @@ function renderHistoryItem(item: HistoryItem): string {
     const chant = item.value;
     const rounds = chant.rounds === null ? 'ไม่ระบุจำนวนรอบ' : `${chant.rounds} รอบ`;
     const duration = chant.durationSec === null ? 'ไม่ระบุเวลา' : durationText(chant.durationSec);
-    return `<article class="history-card"><div class="history-top"><span class="history-kind chanting">สวดมนต์</span>${chant.source === 'manual' ? manualTag : ''}<time datetime="${chant.endedAt}">${dateTime(chant.endedAt)}</time></div><h3>${escapeHtml(chant.prayerTitleSnapshot)}</h3><p>${rounds}</p><div class="history-foot"><small>เวลาที่สวด: ${duration}</small>${deleteButton('chant', chant.id)}</div></article>`;
+    return `<article class="history-card theme-chanting"><div class="history-top"><span class="history-kind chanting">สวดมนต์</span>${chant.source === 'manual' ? manualTag : ''}<time datetime="${chant.endedAt}">${dateTime(chant.endedAt)}</time></div><h3>${escapeHtml(chant.prayerTitleSnapshot)}</h3><p>${rounds}</p><div class="history-foot"><small>เวลาที่สวด: ${duration}</small>${deleteButton('chant', chant.id)}</div></article>`;
   }
   const session = item.value;
   const activity = session.type === 'sitting' ? 'นั่งสมาธิ' : 'เดินจงกรม';
   if (session.source === 'manual') {
-    return `<article class="history-card"><div class="history-top"><span class="history-kind ${session.type}">${activity}</span>${manualTag}<time datetime="${session.endedAt}">${dateTime(session.endedAt)}</time></div><h3>ฝึก ${durationText(session.durationSec)}</h3><div class="history-foot"><small>เริ่ม ${dateTime(session.startedAt)}</small>${deleteButton('practice', session.id)}</div></article>`;
+    return `<article class="history-card theme-${session.type}"><div class="history-top"><span class="history-kind ${session.type}">${activity}</span>${manualTag}<time datetime="${session.endedAt}">${dateTime(session.endedAt)}</time></div><h3>ฝึก ${durationText(session.durationSec)}</h3><div class="history-foot"><small>เริ่ม ${dateTime(session.startedAt)}</small>${deleteButton('practice', session.id)}</div></article>`;
   }
   const status = session.plannedDurationSec === null ? 'ไม่กำหนดเวลาจบ' : session.status === 'completed' ? 'ครบเวลาที่ตั้งไว้' : 'จบก่อนเวลาที่ตั้งไว้';
   const planned = session.plannedDurationSec === null ? '' : ` · ตั้งไว้ ${durationText(session.plannedDurationSec)}`;
-  return `<article class="history-card"><div class="history-top"><span class="history-kind ${session.type}">${activity}</span><time datetime="${session.endedAt}">${dateTime(session.endedAt)}</time></div><h3>ฝึกจริง ${durationText(session.durationSec)}</h3><p>${status}${planned}</p><div class="history-foot"><small>เริ่ม ${dateTime(session.startedAt)}</small>${deleteButton('practice', session.id)}</div></article>`;
+  return `<article class="history-card theme-${session.type}"><div class="history-top"><span class="history-kind ${session.type}">${activity}</span><time datetime="${session.endedAt}">${dateTime(session.endedAt)}</time></div><h3>ฝึกจริง ${durationText(session.durationSec)}</h3><p>${status}${planned}</p><div class="history-foot"><small>เริ่ม ${dateTime(session.startedAt)}</small>${deleteButton('practice', session.id)}</div></article>`;
 }
 
 export function localDateInput(nowMs: number): string {
@@ -231,7 +231,7 @@ function renderChantChart(
     </button>`;
   }).join('');
   return `
-    <div class="chart-card chant-card">
+    <div class="chart-card chant-card theme-chanting">
       <div class="chant-card-title"><span class="eyebrow">รอบการสวด</span></div>
       <div class="chant-chips" aria-label="เลือกบทสวด">${chips}</div>
       ${renderGoal(progress, options.prayerId)}
@@ -264,9 +264,9 @@ export function renderRecords(
       <div class="period-chips" aria-label="เลือกช่วงเวลาสถิติ">${periodButton('day', period, 'วัน')}${periodButton('week', period, 'สัปดาห์')}${periodButton('month', period, 'เดือน')}${periodButton('all', period, 'ทั้งหมด')}</div>
       <div class="period-nav">${nav}<p class="period-caption">${periodCaption(period, anchorMs, nowMs)}</p>${navNext}</div>
       <div class="records-summary">
-        <div><span>นั่งสมาธิ</span><strong>${durationText(sittingTotal)}</strong><small>${stats.sitting.count} ครั้ง${stats.legacySittingSec ? ' · รวมยอดยกมาจากไฟล์สำรอง' : ''}</small></div>
-        <div><span>เดินจงกรม</span><strong>${durationText(stats.walking.durationSec)}</strong><small>${stats.walking.count} ครั้ง</small></div>
-        <div><span>สวดมนต์</span><strong>${stats.chanting.count} ครั้ง</strong><small>${stats.chanting.rounds} รอบ${stats.chanting.timedCount ? ` · ${durationText(stats.chanting.durationSec)}` : ''}</small></div>
+        <div class="theme-sitting"><span>นั่งสมาธิ</span><strong>${durationText(sittingTotal)}</strong><small>${stats.sitting.count} ครั้ง${stats.legacySittingSec ? ' · รวมยอดยกมาจากไฟล์สำรอง' : ''}</small></div>
+        <div class="theme-walking"><span>เดินจงกรม</span><strong>${durationText(stats.walking.durationSec)}</strong><small>${stats.walking.count} ครั้ง</small></div>
+        <div class="theme-chanting"><span>สวดมนต์</span><strong>${stats.chanting.count} ครั้ง</strong><small>${stats.chanting.rounds} รอบ${stats.chanting.timedCount ? ` · ${durationText(stats.chanting.durationSec)}` : ''}</small></div>
       </div>
       ${renderChart(period, buildBuckets(sessions, chants, period, anchorMs, nowMs), nowMs)}
       ${renderChantChart(period, buildBuckets([], chartChants, period, anchorMs, nowMs), chantOptions, anchorMs, chants, nowMs)}

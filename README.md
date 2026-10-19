@@ -89,6 +89,8 @@ push เข้า `main` แล้ว GitHub Actions จะ `npm ci` → `npm te
 - `CustomPrayer` และ `ChantSession` เก็บใน IndexedDB; ประวัติการสวดจำชื่อบทไว้ ณ วันที่บันทึก แม้แก้หรือลบบทส่วนตัวภายหลัง
 - `src/features/records/stats.ts` — คำนวณช่วงเวลาใน timezone ของเครื่อง; สัปดาห์เริ่มวันจันทร์; ระยะเวลานั่ง/เดินที่ข้ามเที่ยงคืนแบ่งตามช่วงฝึกจริง; เลื่อนช่วง (`shiftAnchor`) และแท่งกราฟ (`buildBuckets`)
 - `src/features/records/backfill.ts` — สร้างและตรวจบันทึกย้อนหลัง (`source: 'manual'`) แยกจากหน้าจอเพื่อให้เทสต์ได้
+- `src/styles/main.css` — สีประจำกิจกรรมใช้ชุดเดียวทั้งแอป (นั่ง = เขียว, เดิน = เหลืองทราย, สวด = ม่วง) เป็นตัวแปร `--card` / `--card-line` / `--card-strong` ในคลาส `.theme-sitting|walking|chanting` ใส่คลาสที่การ์ดหรือที่ `<main>` (App.ts เลือกให้ตามหน้า) กล่องที่ไม่ผูกกิจกรรมใช้สีหินกลาง ๆ จาก `:root` · กล่องใหม่ให้ใช้ `var(--card)` อย่าฝังสีเอง
+- ฟอร์มบันทึกย้อนหลังตั้งต้นเป็นสวดมนต์ บทพระคาถาเงินล้าน (`currentBackfillDraft` ใน App.ts) เพราะเป็นกรณีที่ใช้บ่อยสุด
 - `public/manifest.webmanifest`, `public/sw.js` — PWA และ offline app shell
 - `public/icons/` — ไอคอนสำหรับเว็บและ Home Screen
 - `public/audio/bells/`, `public/audio/ambience/` — เสียงระฆังสั้นและเสียงพื้นหลังตัวอย่างที่สร้างในโปรเจกต์; `scripts/generate_audio.py` ใช้สร้างไฟล์ใหม่เมื่อจำเป็น

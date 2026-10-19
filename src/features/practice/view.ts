@@ -45,17 +45,17 @@ export function renderPracticeHome(settings: Settings, active: ActiveSession | n
 
     <div class="section-heading"><div><span class="eyebrow">เริ่มฝึก</span><h2>เลือกกิจกรรม</h2></div><span>01 / 03</span></div>
     <div class="activity-list">
-      <a class="activity-card" href="#/practice/sitting">
+      <a class="activity-card theme-sitting" href="#/practice/sitting">
         <span class="activity-symbol sitting">${icon('lotus')}</span>
         <span class="activity-text"><strong>นั่งสมาธิ</strong><small>${preferenceLabel(settings.sitting)}</small></span>
         <span class="activity-arrow">${icon('arrow')}</span>
       </a>
-      <a class="activity-card" href="#/practice/walking">
+      <a class="activity-card theme-walking" href="#/practice/walking">
         <span class="activity-symbol walking">${icon('walk')}</span>
         <span class="activity-text"><strong>เดินจงกรม</strong><small>${preferenceLabel(settings.walking)}</small></span>
         <span class="activity-arrow">${icon('arrow')}</span>
       </a>
-      <a class="activity-card" href="#/prayers">
+      <a class="activity-card theme-chanting" href="#/prayers">
         <span class="activity-symbol chanting">${icon('chant')}</span>
         <span class="activity-text"><strong>สวดมนต์</strong><small>เลือกบทสวดที่อยากอ่านวันนี้</small></span>
         <span class="activity-arrow">${icon('arrow')}</span>
