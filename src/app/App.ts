@@ -497,10 +497,12 @@ export class App {
     // ค่าเริ่มต้นเป็นวันนี้ ต้นชั่วโมงที่แล้ว เพื่อให้กดบันทึกได้ทันทีโดยเวลาจบไม่เลยปัจจุบัน
     const hour = new Date(now.getTime() - 3_600_000);
     return this.backfillDraft ?? {
-      kind: 'sitting',
+      // ที่ใช้บันทึกย้อนหลังบ่อยที่สุดคือสวดพระคาถาเงินล้านแล้วลืมกด จึงตั้งเป็นค่าเริ่มต้น
+      // ถ้าบทนี้ถูกถอดออกจาก catalog ในอนาคต ก็ถอยไปใช้บทแรกแทน
+      kind: 'chanting',
       date: localDateInput(hour.getTime()),
       time: `${String(hour.getHours()).padStart(2, '0')}:00`,
-      prayerId: prayers[0]?.id ?? '',
+      prayerId: prayers.find((prayer) => prayer.id === 'millionaire-chant')?.id ?? prayers[0]?.id ?? '',
     };
   }
 
